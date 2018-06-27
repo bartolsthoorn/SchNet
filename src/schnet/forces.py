@@ -3,7 +3,7 @@ import tensorflow as tf
 from schnet.data import get_atoms_input
 
 
-def predict_energy_forces(model, data):
+def predict_property(model, data):
     atoms_input = get_atoms_input(data)
     g = tf.get_default_graph()
     with g.gradient_override_map({"Tile": "TileDense"}):

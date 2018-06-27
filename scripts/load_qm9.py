@@ -112,6 +112,8 @@ def load_data(dbpath):
 
 
 if __name__ == '__main__':
+    logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
+
     parser = argparse.ArgumentParser()
     parser.add_argument('destpath', help='Path to QM9 directory')
     args = parser.parse_args()

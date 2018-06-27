@@ -7,7 +7,7 @@ import numpy as np
 import tensorflow as tf
 from schnet.atoms import stats_per_atom
 from schnet.data import ASEReader, DataProvider
-from schnet.forces import predict_energy_forces, calculate_errors, \
+from schnet.forces import predict_property, calculate_errors, \
     collect_summaries
 from schnet.models import SchNet
 from schnet.nn.train import EarlyStopping, build_train_op
@@ -42,7 +42,7 @@ def train(args):
     logging.info('Setup data reader')
     forces = [args.forces] if args.forces != 'none' else []
     data_reader = ASEReader(args.data,
-                            [args.energy],
+                            [args.property],
                             forces, [(None, 3)])
 
     if not os.path.exists(splitpath):
@@ -68,15 +68,15 @@ def train(args):
     atomref = None
     try:
         atomref = np.load(args.atomref)['atom_ref']
-        if args.energy == 'energy_U0':
+        if args.property == 'energy_U0':
             atomref = atomref[:, 1:2]
-        if args.energy == 'energy_U':
+        if args.property == 'energy_U':
             atomref = atomref[:, 2:3]
-        if args.energy == 'enthalpy_H':
+        if args.property == 'enthalpy_H':
             atomref = atomref[:, 3:4]
-        if args.energy == 'free_G':
+        if args.property == 'free_G':
             atomref = atomref[:, 4:5]
-        if args.energy == 'Cv':
+        if args.property == 'Cv':
             atomref = atomref[:, 5:6]
     except Exception as e:
         print(e)
@@ -89,30 +89,30 @@ def train(args):
     val_data = val_provider.get_batch()
 
     logging.info('Collect train data statistics')
-    E = data_reader.get_property(args.energy, train_idx)
+    E = data_reader.get_property(args.property, train_idx)
     Z = data_reader.get_atomic_numbers(train_idx)
-    mean_energy_per_atom, stddev_energy_per_atom = \
+    mean_property_per_atom, stddev_property_per_atom = \
         stats_per_atom(E, Z, args.intensive, atomref)
-    logging.info('Energy statistics: mu/atom=' + str(mean_energy_per_atom) +
-                 ', std/atom=' + str(stddev_energy_per_atom))
+    logging.info('Property statistics: mu/atom=' + str(mean_property_per_atom) +
+                 ', std/atom=' + str(stddev_property_per_atom))
 
     logging.info('Setup model')
     schnet = SchNet(args.interactions, args.basis, args.filters, args.cutoff,
-                    mean_energy_per_atom, stddev_energy_per_atom,
+                    mean_property_per_atom, stddev_property_per_atom,
                     atomref=atomref, intensive=args.intensive,
                     filter_pool_mode=args.filter_pool_mode)
 
     # apply model
-    Ep_train, Fp_train = predict_energy_forces(schnet, train_data)
-    Ep_val, Fp_val = predict_energy_forces(schnet, val_data)
+    Ep_train, Fp_train = predict_property(schnet, train_data)
+    Ep_val, Fp_val = predict_property(schnet, val_data)
 
     # calculate loss, errors & summaries
     train_loss, train_errors = calculate_errors(Ep_train, Fp_train, train_data,
-                                                args.energy, args.forces,
+                                                args.property, args.forces,
                                                 args.eweight, args.fit_energy,
                                                 args.fit_force)
     val_loss, val_errors = calculate_errors(Ep_val, Fp_val, val_data,
-                                            args.energy, args.forces,
+                                            args.property, args.forces,
                                             args.eweight, args.fit_energy,
                                             args.fit_force)
 
@@ -158,7 +158,7 @@ if __name__ == '__main__':
                         type=int, default=-1)
     parser.add_argument('--nval', help='Number of validation examples',
                         type=int, default=-1)
-    parser.add_argument('--energy', help='Name of run',
+    parser.add_argument('--property', help='Name of property',
                         default='energy_U0')
     parser.add_argument('--forces', help='Name of run',
                         default='none')
