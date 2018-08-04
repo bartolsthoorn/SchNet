@@ -85,7 +85,7 @@ class EarlyStopping:
             else:
                 start = time()
                 _, step = sess.run([self.train_op, self.global_step])
-                print('Train step:', time() - start)
+                print(step, 'Train step:', time() - start)
 
             if step % self.validation_interval == 0:
                 loss = []
