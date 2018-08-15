@@ -66,20 +66,20 @@ def train(args):
         val_idx = S['val_idx']
 
     atomref = None
-    try:
-        atomref = np.load(args.atomref)['atom_ref']
-        if args.property == 'energy_U0':
-            atomref = atomref[:, 1:2]
-        if args.property == 'energy_U':
-            atomref = atomref[:, 2:3]
-        if args.property == 'enthalpy_H':
-            atomref = atomref[:, 3:4]
-        if args.property == 'free_G':
-            atomref = atomref[:, 4:5]
-        if args.property == 'Cv':
-            atomref = atomref[:, 5:6]
-    except Exception as e:
-        print(e)
+    #try:
+    #    atomref = np.load(args.atomref)['atom_ref']
+    #    if args.property == 'energy_U0':
+    #        atomref = atomref[:, 1:2]
+    #    if args.property == 'energy_U':
+    #        atomref = atomref[:, 2:3]
+    #    if args.property == 'enthalpy_H':
+    #        atomref = atomref[:, 3:4]
+    #    if args.property == 'free_G':
+    #        atomref = atomref[:, 4:5]
+    #    if args.property == 'Cv':
+    #        atomref = atomref[:, 5:6]
+    #except Exception as e:
+    #    print(e)
 
     logging.info('Setup train/validation data providers')
     train_provider = DataProvider(data_reader, args.batch_size,
@@ -159,7 +159,7 @@ if __name__ == '__main__':
     parser.add_argument('--nval', help='Number of validation examples',
                         type=int, default=-1)
     parser.add_argument('--property', help='Name of property',
-                        default='energy_U0')
+                        default='target')
     parser.add_argument('--forces', help='Name of run',
                         default='none')
     parser.add_argument('--filter_pool_mode', help='One out of [sum, mean]',
@@ -193,7 +193,7 @@ if __name__ == '__main__':
                         default=50000)
     parser.add_argument('--valbatch', type=int,
                         help='Size of validation batches',
-                        default=100)
+                        default=32)
     parser.add_argument('--name', help='Name of run',
                         default='')
     parser.add_argument('--lr', type=float, help='Learning rate',
