@@ -28,9 +28,10 @@ def load_data(xyz_filename, targets):
     with connect('xyz.db') as con:
         for material in tqdm(materials):
             ats = material
+            print(ats)
 
             idx_ik, seg_i, idx_j, idx_jk, seg_j, offset, ratio_j = \
-                collect_neighbors(ats, 20.)
+                collect_neighbors(ats, 10.)
 
             data = {'_idx_ik': idx_ik, '_idx_jk': idx_jk, '_idx_j': idx_j,
                     '_seg_i': seg_i, '_seg_j': seg_j, '_offset': offset,
@@ -38,7 +39,7 @@ def load_data(xyz_filename, targets):
             properties = {'target': targets[i]}
             i += 1
             con.write(ats, key_value_pairs=properties, data=data)
-            if i == 100:
+            if i == 2000:
                 break
     logging.info('Done.')
 

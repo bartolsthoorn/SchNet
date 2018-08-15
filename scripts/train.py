@@ -57,6 +57,7 @@ def train(args):
         train_idx = pidx[:args.ntrain]
         val_idx = pidx[args.ntrain:args.ntrain + args.nval]
         test_idx = pidx[args.ntrain + args.nval:]
+        print('Dataset split:', len(train_idx), len(val_idx), len(test_idx))
         np.savez(splitpath, train_idx=train_idx,
                  val_idx=val_idx, test_idx=test_idx)
     else:
@@ -175,7 +176,7 @@ if __name__ == '__main__':
     parser.add_argument('--batch_size', type=int, help='Batch size',
                         default=32)
     parser.add_argument('--cutoff', type=float, help='Distance cutoff',
-                        default=20.)
+                        default=10.)
     parser.add_argument('--interactions', type=int, help='Distance cutoff',
                         default=6)
     parser.add_argument('--basis', type=int, help='Basis set size',

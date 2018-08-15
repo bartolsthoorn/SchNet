@@ -1,0 +1,2 @@
+rm -rf splits.npz
+python scripts/train.py xyz.db ./modeldir ./splits.npz --ntrain 1500 --nval 500 --cutoff 10 --batch_size 2 --valbatch 2 --fit_energy --intensive --filters 32 --basis 32 --interactions 2 --valint 200

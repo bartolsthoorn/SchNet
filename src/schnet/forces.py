@@ -42,6 +42,7 @@ def calculate_errors(Ep, Fp, data, energy_prop, force_prop,
 
 
 def collect_summaries(args, loss, errors):
+    print(errors)
     emse, emae, fmse, fmae = errors
     vloss = np.sum(loss)
 

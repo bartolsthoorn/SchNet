@@ -10,7 +10,7 @@ class EarlyStopping:
                  train_loss, train_errors, val_loss, val_errors, summary_fn,
                  validation_batches, global_step,
                  save_interval=1000,
-                 validation_interval=1000, summary_interval=1000):
+                 validation_interval=1000, summary_interval=100):
         self.output_dir = output_dir
         self.model = model
         self.train_op = train_op
@@ -85,7 +85,7 @@ class EarlyStopping:
             else:
                 start = time()
                 _, step = sess.run([self.train_op, self.global_step])
-                print(step, 'Train step:', time() - start)
+                print('Train step %d:' % step, time() - start)
 
             if step % self.validation_interval == 0:
                 loss = []
