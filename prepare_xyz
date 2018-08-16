@@ -1,0 +1,2 @@
+rm xyz.db
+python scripts/load_xyz.py ../OMDB-BANDGAP/quippy.xyz ../OMDB-BANDGAP/band_gaps.csv

@@ -54,12 +54,17 @@ def train(args):
 
         N = len(data_reader)
         pidx = np.random.permutation(N)
-        train_idx = pidx[:args.ntrain]
-        val_idx = pidx[args.ntrain:args.ntrain + args.nval]
-        test_idx = pidx[args.ntrain + args.nval:]
-        print('Dataset split:', len(train_idx), len(val_idx), len(test_idx))
+        #train_idx = pidx[:args.ntrain]
+        #val_idx = pidx[args.ntrain:args.ntrain + args.nval]
+        #test_idx = pidx[args.ntrain + args.nval:]
+        #print('Dataset split:', len(train_idx), len(val_idx), len(test_idx))
+        #np.savez(splitpath, train_idx=train_idx,
+        #         val_idx=val_idx, test_idx=test_idx)
+        val_idx = pidx[:args.nval]
+        train_idx = pidx[args.nval:args.nval+args.ntrain]
+        print('Dataset split:', len(train_idx), len(val_idx))
         np.savez(splitpath, train_idx=train_idx,
-                 val_idx=val_idx, test_idx=test_idx)
+                 val_idx=val_idx)
     else:
         logging.info('Load existing data splits')
         S = np.load(splitpath)

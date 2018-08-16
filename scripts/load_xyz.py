@@ -39,7 +39,7 @@ def load_data(xyz_filename, targets):
             properties = {'target': targets[i]}
             i += 1
             con.write(ats, key_value_pairs=properties, data=data)
-            if i == 2000:
+            if i == 5000:
                 break
     logging.info('Done.')
 
