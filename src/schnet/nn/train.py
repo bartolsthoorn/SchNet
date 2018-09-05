@@ -10,6 +10,7 @@ class EarlyStopping:
                  train_loss, train_errors, val_loss, val_errors, summary_fn,
                  validation_batches, global_step,
                  save_interval=1000,
+                 validation=None,
                  validation_interval=1000, summary_interval=100):
         self.output_dir = output_dir
         self.model = model
@@ -20,6 +21,7 @@ class EarlyStopping:
         self.val_errors = val_errors
         self.summary_fn = summary_fn
         self.global_step = global_step
+        self.validation = validation # Added to make raw prediction values available
         self.validation_batches = validation_batches
         self.validation_interval = validation_interval
         self.save_interval = save_interval
@@ -38,6 +40,7 @@ class EarlyStopping:
             os.makedirs(self.val_dir)
 
         # validation loss
+        self.val_predictions_path = os.path.join(self.val_dir, 'val_predictions')
         self.loss_path = os.path.join(self.train_dir, 'loss.npz')
         if os.path.exists(self.loss_path):
             lf = np.load(self.loss_path)
@@ -69,6 +72,12 @@ class EarlyStopping:
         step = self.start_iter
         while not coord.should_stop():
             if step > max_steps:
+                #val_predictions = []
+                #for i in range(self.validation_batches):
+                #    result = sess.run(self.validation)
+                #    val_predictions.append(result)
+                #np.save(self.val_predictions_path, np.array(val_predictions))
+
                 coord.request_stop()
                 break
 
@@ -108,6 +117,7 @@ class EarlyStopping:
 
             if step % self.save_interval == 0:
                 self.saver.save(sess, self.chkpts, global_step=step)
+
 
 
 def build_train_op(loss, optimizer, global_step, moving_avg_decay=0.99,

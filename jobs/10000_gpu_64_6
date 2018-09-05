@@ -1,0 +1,29 @@
+#!/bin/bash -l
+# The -l above is required to get the full environment with modules
+
+# Set the allocation to be charged for this job
+# not required if you have set a default allocation
+#SBATCH -A 2018-63
+
+#SBATCH --gres=gpu:K80:2
+
+# The name of the script is myjob
+#SBATCH -J SchNet10000
+
+# wall-clock time will be given to this job
+#SBATCH -t 08:00:00
+
+# Number of nodes
+#SBATCH --nodes=1
+
+#SBATCH -e /cfs/klemming/nobackup/b/bartol/SchNet2/SchNet/jobs/logs/error_10000_64_6
+#SBATCH -o /cfs/klemming/nobackup/b/bartol/SchNet2/SchNet/jobs/logs/output_10000_64_6
+
+
+module add cudnn/5.1-cuda-8.0
+module load anaconda/py35/4.2.0
+source activate tensorflow1.1
+cd /cfs/klemming/nobackup/b/bartol/SchNet2/SchNet && python setup.py install --user
+rm -rf splits10000_64_6.npz
+cd /cfs/klemming/nobackup/b/bartol/SchNet2/SchNet && python -u scripts/train.py xyz_5.db ./modeldir ./splits10000_64_6.npz --intensive --lr 0.001 --nepochs 75 --ntrain 9000 --nval 1000 --cutoff 5 --batch_size 32 --valbatch 25 --fit_energy --filters 64 --basis 64 --interactions 6 --valint 200
+source deactivate

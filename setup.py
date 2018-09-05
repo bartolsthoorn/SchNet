@@ -9,7 +9,7 @@ def read(fname):
 setup(
     name='SchNet',
     version='0.1.1',
-    author='Kristof T. Schütt',
+    author='Kristof T. Schutt',
     email='kristof.schuett@tu-berlin.de',
     url='https://github.com/atomistic-machine-learning/SchNet',
     packages=find_packages('src'),

@@ -7,43 +7,44 @@ import numpy as np
 import tensorflow as tf
 from schnet.atoms import stats_per_atom
 from schnet.data import ASEReader, DataProvider
-from schnet.forces import predict_energy_forces, calculate_errors, \
+from schnet.forces import predict_property, calculate_errors, \
     collect_summaries
 from schnet.models import SchNet
 from schnet.nn.train import EarlyStopping, build_train_op
+from tqdm import tqdm
 
 logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
 
 
-def eval(model_path, data_path, indices, energy, forces, name, batch_size=100, atomref=None):
+def eval(model_path, data_path, indices, property, forces, name, batch_size=100, atomref=None):
     tf.reset_default_graph()
     checkpoint_dir = os.path.join(model_path, 'validation')
     ckpt = tf.train.latest_checkpoint(checkpoint_dir)
-    print(ckpt)
+    print('ckpt:', ckpt)
 
     args = np.load(os.path.join(model_path, 'args.npy')).item()
 
     atomref = None
-    try:
-        atomref = np.load(atomref)['atom_ref']
-        if args.energy == 'energy_U0':
-            atomref = atomref[:, 1:2]
-        if args.energy == 'energy_U':
-            atomref = atomref[:, 2:3]
-        if args.energy == 'enthalpy_H':
-            atomref = atomref[:, 3:4]
-        if args.energy == 'free_G':
-            atomref = atomref[:, 4:5]
-        if args.energy == 'Cv':
-            atomref = atomref[:, 5:6]
-    except Exception as e:
-        print(e)
+    #try:
+    #    atomref = np.load(atomref)['atom_ref']
+    #    if args.energy == 'energy_U0':
+    #        atomref = atomref[:, 1:2]
+    #    if args.energy == 'energy_U':
+    #        atomref = atomref[:, 2:3]
+    #    if args.energy == 'enthalpy_H':
+    #        atomref = atomref[:, 3:4]
+    #    if args.energy == 'free_G':
+    #        atomref = atomref[:, 4:5]
+    #    if args.energy == 'Cv':
+    #        atomref = atomref[:, 5:6]
+    #except Exception as e:
+    #    print(e)
 
     # setup data pipeline
     logging.info('Setup data reader')
     fforces = [forces] if forces != 'none' else []
     data_reader = ASEReader(data_path,
-                            [energy],
+                            [property],
                             fforces, [(None, 3)])
     data_provider = DataProvider(data_reader, batch_size, indices,
                                  shuffle=False)
@@ -56,40 +57,40 @@ def eval(model_path, data_path, indices, energy, forces, name, batch_size=100, a
                     filter_pool_mode=args.filter_pool_mode)
 
     # apply model
-    Et = data_batch[energy]
+    Et = data_batch[property]
     if forces != 'none':
         Ft = data_batch[forces]
-    Ep, Fp = predict_energy_forces(schnet, data_batch)
+    Ep, Fp = predict_property(schnet, data_batch)
 
     aids = []
     Epred = []
     Fpred = []
     E = []
     F = []
-    count = 0
+
     with tf.Session() as sess:
         coord = tf.train.Coordinator()
         data_provider.create_threads(sess, coord)
         schnet.restore(sess, ckpt)
 
-        for i in range(len(data_provider) // batch_size):
+        for i in tqdm(range(len(data_provider) // batch_size)):
             if forces != 'none':
                 e, f, ep, fp, aid = sess.run([Et, Ft, Ep, Fp, data_batch['aid']])
                 F.append(f)
                 Fpred.append(fp)
             else:
                 e, ep, aid = sess.run([Et, Ep, data_batch['aid']])
-            E.append(e)
-            Epred.append(ep)
+            E.append(e.ravel())
+            Epred.append(ep.ravel())
             aids.append(aid)
 
-            count += 1
-            if count % 10 == 0:
-                print(count)
 
-    E = np.hstack(E).ravel()
+    E = np.hstack(E)
     aids = np.hstack(aids)
-    Epred = np.hstack(Epred).ravel()
+    Epred = np.hstack(Epred)
+    if (Epred.min() < 0.0):
+        print('Negative bandgap predicted!!!!', Epred.min())
+        Epred = np.clip(Epred, 0, None)
     e_mae = np.mean(np.abs(E - Epred))
     e_rmse = np.sqrt(np.mean(np.square(E - Epred)))
 
@@ -115,9 +116,11 @@ if __name__ == '__main__':
     parser.add_argument('data', help='Path to data')
     parser.add_argument('splitdir', help='directory with data splits')
     parser.add_argument('split', help='train / val / test')
-    parser.add_argument('--energy', help='Name of run',
-                        default='energy_U0')
-    parser.add_argument('--forces', help='Name of run',
+    parser.add_argument('--batch_size', type=int, help='Batch size',
+                        default=10)
+    parser.add_argument('--property', help='Name of property',
+                        default='target')
+    parser.add_argument('--forces', help='Enable forces',
                         default='none')
     parser.add_argument('--atomref', help='Atom reference file (NPZ)',
                         default=None)
@@ -127,7 +130,7 @@ if __name__ == '__main__':
 
     with open(os.path.join(args.path, 'errors_' + args.split + '.csv'),
               'w') as f:
-        f.write('model,energy MAE,energy RMSE,force MAE,force RMSE\n')
+        f.write('model,property MAE,property RMSE,force MAE,force RMSE\n')
         for dir in os.listdir(args.path):
             mdir = os.path.join(args.path, dir)
             if not os.path.isdir(mdir):
@@ -142,7 +145,7 @@ if __name__ == '__main__':
             print(len(indices)//100)
             try:
                 res = eval(mdir, args.data, indices,
-                           args.energy, args.forces, args.split, atomref=args.atomref)
+                        args.property, args.forces, args.split, atomref=args.atomref, batch_size=args.batch_size)
             except Exception as e:
                 print(e)
                 continue

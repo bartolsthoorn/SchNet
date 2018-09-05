@@ -25,10 +25,10 @@ def load_data(xyz_filename, targets):
     targets = np.loadtxt(targets)
 
     i = 0
-    with connect('xyz.db') as con:
+    with connect('xyz_10.db') as con:
         for material in tqdm(materials):
             ats = material
-            print(ats)
+            #print(ats)
 
             idx_ik, seg_i, idx_j, idx_jk, seg_j, offset, ratio_j = \
                 collect_neighbors(ats, 10.)
@@ -39,8 +39,8 @@ def load_data(xyz_filename, targets):
             properties = {'target': targets[i]}
             i += 1
             con.write(ats, key_value_pairs=properties, data=data)
-            if i == 5000:
-                break
+            #if i == 5000:
+            #    break
     logging.info('Done.')
 
     return True

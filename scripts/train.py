@@ -23,10 +23,10 @@ def train(args):
     splitname = splitpath.split('/')[-1].split('.')[0]
 
     # initialize output files
-    name = '{0}_{1}_{2}_{3}_{4}_{5}_{6}_{7}_{8}_{9}'.format(
-        'SchNet', args.fit_energy, args.fit_force,
+    name = '{0}_{1}_{2}_{3}_{4}_{5}_{6}_{7}_{8}_{9}_{10}_{11}'.format(
+        'SchNet', args.ntrain, args.fit_energy, args.fit_force,
         args.basis, args.filters, args.interactions, args.cutoff,
-        args.lr, args.eweight, splitname
+        args.lr, args.edecay, args.eweight, splitname
     )
     if len(args.name) > 0:
         name += '_' + args.name
@@ -53,18 +53,22 @@ def train(args):
             return
 
         N = len(data_reader)
-        pidx = np.random.permutation(N)
+        #pidx = np.random.permutation(N)
+        pidx = np.arange(N)
         #train_idx = pidx[:args.ntrain]
         #val_idx = pidx[args.ntrain:args.ntrain + args.nval]
         #test_idx = pidx[args.ntrain + args.nval:]
         #print('Dataset split:', len(train_idx), len(val_idx), len(test_idx))
         #np.savez(splitpath, train_idx=train_idx,
         #         val_idx=val_idx, test_idx=test_idx)
-        val_idx = pidx[:args.nval]
-        train_idx = pidx[args.nval:args.nval+args.ntrain]
+        train_idx = pidx[:args.ntrain]
+        val_idx = pidx[9000:9000 + args.nval]
+        test_idx = pidx[-2500:]
+        #val_idx = pidx[2500:2500+args.nval]
+        #train_idx = pidx[2500+args.nval:2500+args.nval+args.ntrain]
         print('Dataset split:', len(train_idx), len(val_idx))
         np.savez(splitpath, train_idx=train_idx,
-                 val_idx=val_idx)
+                 val_idx=val_idx, test_idx=test_idx)
     else:
         logging.info('Load existing data splits')
         S = np.load(splitpath)
@@ -123,11 +127,15 @@ def train(args):
                                             args.fit_force)
 
     # setup training
+    max_steps = round(args.ntrain / args.batch_size * args.nepochs)
+
     logging.info('Setup optimizer')
     global_step = tf.Variable(0, name='global_step', trainable=False)
-    lr = tf.train.exponential_decay(args.lr, global_step, 100000, 0.96)
+    lr = tf.train.exponential_decay(args.lr, global_step, 10000, args.edecay)
+    #lr = args.lr
 
     optimizer = tf.train.AdamOptimizer(lr)
+    #optimizer = tf.train.MomentumOptimizer(lr, 0.9)
     train_op = build_train_op(train_loss, optimizer, global_step)
 
     logging.info('Setup early stopping')
@@ -137,6 +145,7 @@ def train(args):
                             val_loss, val_errors,
                             partial(collect_summaries, args),
                             save_interval=args.saveint,
+                            validation=Ep_val,
                             validation_interval=args.valint,
                             validation_batches=valbatches,
                             global_step=global_step)
@@ -148,8 +157,8 @@ def train(args):
         train_provider.create_threads(sess, coord)
         val_provider.create_threads(sess, coord)
 
-        logging.info('Start training')
-        trainer.train(sess, coord, args.max_steps)
+        logging.info('Start training with %d steps' % max_steps)
+        trainer.train(sess, coord, max_steps)
 
 
 if __name__ == '__main__':
@@ -181,7 +190,7 @@ if __name__ == '__main__':
     parser.add_argument('--batch_size', type=int, help='Batch size',
                         default=32)
     parser.add_argument('--cutoff', type=float, help='Distance cutoff',
-                        default=10.)
+                        default=5.)
     parser.add_argument('--interactions', type=int, help='Distance cutoff',
                         default=6)
     parser.add_argument('--basis', type=int, help='Basis set size',
@@ -191,8 +200,8 @@ if __name__ == '__main__':
     parser.add_argument('--eweight', type=float,
                         help='Number of steps to saturate eloss scale',
                         default=1.)
-    parser.add_argument('--max_steps', type=int, help='Number of steps',
-                        default=5000000)
+    parser.add_argument('--nepochs', type=int, help='Number of epochs',
+                        default=40)
     parser.add_argument('--valint', type=int, help='Validation interval',
                         default=5000)
     parser.add_argument('--saveint', type=int, help='Checkpoint interval',
@@ -204,6 +213,8 @@ if __name__ == '__main__':
                         default='')
     parser.add_argument('--lr', type=float, help='Learning rate',
                         default=1e-3)
+    parser.add_argument('--edecay', type=float, help='Learning rate exponential decay',
+                        default=0.96)
 
     args = parser.parse_args()
 

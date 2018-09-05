@@ -31,8 +31,8 @@ class Module(metaclass=MetaModule):
             self._scope = scope.name
             self._initialize()
         if len(self.variables.keys()) > 0:
-            self.saver = tf.train.Saver(self.variables,
-                                        save_relative_paths=True)
+            self.saver = tf.train.Saver(self.variables)
+                                        #save_relative_paths=True)
         else:
             self.saver = None
 
